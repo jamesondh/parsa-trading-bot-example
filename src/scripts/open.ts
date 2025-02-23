@@ -208,7 +208,7 @@ export async function open(
     } catch (e) {
       console.error("Failed to index transaction:", e);
     }
-  }, 7000);
+  }, 10000);
 
   return {
     position,

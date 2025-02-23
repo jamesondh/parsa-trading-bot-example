@@ -118,7 +118,7 @@ export async function close(
     } catch (e) {
       console.error("Failed to index transaction:", e);
     }
-  }, 7000);
+  }, 10000);
 
   return txid;
 }
