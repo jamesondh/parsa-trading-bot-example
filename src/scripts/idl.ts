@@ -1,5 +1,5 @@
 export const PARSA_IDL = {
-  address: "GjVjvC4aD75ibyLzkfvpEdBnKg1wUdD598tdGmiVg21s",
+  address: "CzQLGepxHuu9sQ66jjgq2osCGRyoTbhaUrKQVxjjy8gV",
   metadata: {
     name: "parsa",
     version: "0.1.0",
@@ -10,6 +10,21 @@ export const PARSA_IDL = {
     {
       name: "cancel_pending_admin",
       discriminator: [96, 213, 92, 102, 118, 54, 82, 93],
+      accounts: [
+        {
+          name: "market",
+          writable: true,
+        },
+        {
+          name: "signer",
+          signer: true,
+        },
+      ],
+      args: [],
+    },
+    {
+      name: "cancel_pending_custom_user_fee_setter",
+      discriminator: [237, 200, 135, 17, 130, 171, 221, 200],
       accounts: [
         {
           name: "market",
@@ -155,6 +170,21 @@ export const PARSA_IDL = {
     {
       name: "finalize_set_admin",
       discriminator: [236, 55, 59, 235, 142, 100, 117, 85],
+      accounts: [
+        {
+          name: "market",
+          writable: true,
+        },
+        {
+          name: "signer",
+          signer: true,
+        },
+      ],
+      args: [],
+    },
+    {
+      name: "finalize_set_custom_user_fee_setter",
+      discriminator: [31, 208, 232, 17, 189, 224, 86, 91],
       accounts: [
         {
           name: "market",
@@ -648,6 +678,26 @@ export const PARSA_IDL = {
       ],
     },
     {
+      name: "set_pending_custom_user_fee_setter",
+      discriminator: [184, 67, 209, 208, 26, 41, 12, 19],
+      accounts: [
+        {
+          name: "market",
+          writable: true,
+        },
+        {
+          name: "signer",
+          signer: true,
+        },
+      ],
+      args: [
+        {
+          name: "custom_user_fee_setter",
+          type: "pubkey",
+        },
+      ],
+    },
+    {
       name: "set_pending_fee",
       discriminator: [93, 97, 206, 112, 192, 198, 119, 194],
       accounts: [
@@ -730,6 +780,26 @@ export const PARSA_IDL = {
         {
           name: "min_update_interval",
           type: "u16",
+        },
+      ],
+    },
+    {
+      name: "set_tick_data_account_creator",
+      discriminator: [75, 216, 181, 176, 253, 72, 33, 177],
+      accounts: [
+        {
+          name: "market",
+          writable: true,
+        },
+        {
+          name: "signer",
+          signer: true,
+        },
+      ],
+      args: [
+        {
+          name: "tick_data_account_creator",
+          type: "pubkey",
         },
       ],
     },
@@ -818,6 +888,10 @@ export const PARSA_IDL = {
       ],
       args: [
         {
+          name: "original_owner",
+          type: "pubkey",
+        },
+        {
           name: "new_owner",
           type: "pubkey",
         },
@@ -873,93 +947,103 @@ export const PARSA_IDL = {
     },
     {
       code: 6004,
+      name: "NotCustomUserFeeSetter",
+      msg: "Caller is not the custom user fee setter.",
+    },
+    {
+      code: 6005,
       name: "InvalidUserTokenAccount",
       msg: "Invalid user token account.",
     },
     {
-      code: 6005,
+      code: 6006,
       name: "InvalidAdminTokenAccount",
       msg: "Invalid admin token account.",
     },
     {
-      code: 6006,
+      code: 6007,
       name: "InvalidPriceUpdate",
       msg: "Invalid price update account.",
     },
     {
-      code: 6007,
+      code: 6008,
       name: "NoPendingChange",
       msg: "No pending change.",
     },
     {
-      code: 6008,
+      code: 6009,
       name: "ChangeLocked",
       msg: "Change locked.",
     },
     {
-      code: 6009,
+      code: 6010,
       name: "OpenPaused",
       msg: "Opening positions are paused.",
     },
     {
-      code: 6010,
+      code: 6011,
       name: "PriceFeedPaused",
       msg: "Price feed is paused.",
     },
     {
-      code: 6011,
+      code: 6012,
       name: "InvalidFee",
       msg: "Invalid fee.",
     },
     {
-      code: 6012,
+      code: 6013,
       name: "InvalidCustomUserFee",
       msg: "Invalid custom user fee.",
     },
     {
-      code: 6013,
+      code: 6014,
       name: "InvalidBitmapIndex",
       msg: "Invalid bitmap index.",
     },
     {
-      code: 6014,
+      code: 6015,
       name: "TickAccountAlreadyInitialized",
       msg: "Tick account already initialized.",
     },
     {
-      code: 6015,
+      code: 6016,
       name: "InvalidTickDataAccounts",
       msg: "Invalid tick data accounts.",
     },
     {
-      code: 6016,
+      code: 6017,
       name: "TickAccountNotInitialized",
       msg: "Tick account not initialized.",
     },
     {
-      code: 6017,
+      code: 6018,
       name: "InvalidTickDataMarket",
       msg: "Invalid market for tick data.",
     },
     {
-      code: 6018,
+      code: 6019,
       name: "TickDataAccountDoesNotIncludeCurrentTick",
       msg: "Tick data account does not include the current tick.",
     },
     {
-      code: 6019,
+      code: 6020,
       name: "InvalidFeed",
       msg: "Invalid feed.",
     },
     {
-      code: 6020,
+      code: 6021,
       name: "InvalidOracleProvider",
       msg: "Invalid oracle provider.",
     },
     {
-      code: 6021,
+      code: 6022,
       name: "PriceTooOld",
       msg: "Price too old.",
+    },
+    {
+      code: 6023,
+      name: "NotTickDataAccountCreator",
+      msg: "Not tick data account creator.",
     },
   ],
   types: [
@@ -988,6 +1072,14 @@ export const PARSA_IDL = {
           },
           {
             name: "admin",
+            type: "pubkey",
+          },
+          {
+            name: "custom_user_fee_setter",
+            type: "pubkey",
+          },
+          {
+            name: "tick_data_account_creator",
             type: "pubkey",
           },
           {
@@ -1125,6 +1217,14 @@ export const PARSA_IDL = {
             type: {
               array: ["u8", 6],
             },
+          },
+          {
+            name: "pending_custom_user_fee_setter",
+            type: "pubkey",
+          },
+          {
+            name: "pending_custom_user_fee_setter_timestamp",
+            type: "i64",
           },
           {
             name: "current_price",

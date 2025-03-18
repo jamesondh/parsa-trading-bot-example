@@ -237,6 +237,12 @@ async function closeNegativeYieldPositions() {
   // get all open positions
   const getPositionsResult = await getPositions(user.publicKey.toBase58());
   const positions = getPositionsResult.positions;
+
+  if (!getPositionsResult.markets) {
+    console.log(new Date(), "No open positions");
+    return;
+  }
+
   const markets = getPositionsResult.markets;
   for (const position of positions) {
     // skip closed positions

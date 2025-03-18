@@ -59,6 +59,8 @@ export type RelevantMarketDataWithSolanaTypes = Omit<
   | "pendingPriceUpdate"
   | "pendingOracleProvider"
   | "pendingOracleTimestamp"
+  | "pendingCustomUserFeeSetter"
+  | "pendingCustomUserFeeSetterTimestamp"
 >;
 
 export type PublicKeyAndBNToBasicTypes<T> = {

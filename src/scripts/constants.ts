@@ -4,6 +4,8 @@ export const MARKET_DATA_HEADER_SIZE =
   1 + // decimals
   7 + // _padding1
   32 + // admin
+  32 + // custom_user_fee_setter
+  32 + // tick_data_account_creator
   8 + // alpha
   32 + // feed_id
   32 + // price_update
@@ -35,6 +37,8 @@ export const MARKET_DATA_HEADER_SIZE =
   1 + // is_open_paused
   1 + // is_price_feed_paused
   6 + // _padding6
+  32 + // pending_custom_user_fee_setter
+  8 + // pending_custom_user_fee_setter_timestamp
   8 + // current_price
   8 + // step_size
   8 + // open_interest

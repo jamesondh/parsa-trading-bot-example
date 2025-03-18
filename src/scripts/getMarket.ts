@@ -48,6 +48,11 @@ export async function getMarket(
   advance(7);
 
   market.admin = new PublicKey(data.slice(advance(32), offset));
+  market.customUserFeeSetter = new PublicKey(data.slice(advance(32), offset));
+  market.tickDataAccountCreator = new PublicKey(
+    data.slice(advance(32), offset)
+  );
+
   market.alpha = view.getFloat64(advance(8), true);
   market.feedId = Array.from(data.slice(advance(32), offset));
   market.priceUpdate = new PublicKey(data.slice(advance(32), offset));
@@ -87,8 +92,11 @@ export async function getMarket(
   market.isOpenPaused = view.getUint8(advance(1));
   market.isPriceFeedPaused = view.getUint8(advance(1));
 
-  // 6 bytes padding
-  advance(6);
+  advance(
+    6 + // padding6
+      32 + // pending_custom_user_fee_setter
+      8 // pending_custom_user_fee_setter_timestamp
+  );
 
   market.currentPrice = view.getFloat64(advance(8), true);
   market.stepSize = view.getFloat64(advance(8), true);
