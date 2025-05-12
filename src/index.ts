@@ -53,6 +53,34 @@ const usdcBalance = (await connection.getTokenAccountBalance(userTokenAccount))
 console.log(new Date(), "USDC balance", usdcBalance);
 
 /**
+ * Calculate the position size based on the configuration
+ */
+async function calculatePositionSize(connection: Connection): Promise<number> {
+  const config = DEVNET_CONFIG.positionSize;
+
+  switch (config.type) {
+    case "constant":
+      return config.value!;
+    case "range":
+      return (
+        Math.floor(Math.random() * (config.max! - config.min! + 1)) +
+        config.min!
+      );
+    case "max_balance":
+      const userTokenAccount = await getAssociatedTokenAddress(
+        new PublicKey(DEVNET_CONFIG.token),
+        user.publicKey
+      );
+      const balance = (
+        await connection.getTokenAccountBalance(userTokenAccount)
+      ).value.uiAmount;
+      return balance || 0;
+    default:
+      return config.value!;
+  }
+}
+
+/**
  * Open a proposed position for a given market
  * @param proposedPosition - The proposed position to open
  * @param marketConfig - The market configuration for the proposed position
@@ -70,12 +98,16 @@ async function openPosition(
     upperPrice
   );
 
+  // Calculate position size
+  const positionSize = await calculatePositionSize(connection);
+  console.log("  ", new Date(), "Position size", positionSize);
+
   // Measure the yield of the proposed position
   const getYieldResult = await getYield(
     marketConfig.address,
     lowerPrice,
     upperPrice,
-    100
+    positionSize
   );
   const estYield = getYieldResult.estYield;
   console.log("  ", new Date(), "Proposed position yield", estYield);
@@ -91,11 +123,22 @@ async function openPosition(
     return;
   }
 
+  // Return early if the estimated yield is above the maximum yield
+  if (estYield > DEVNET_CONFIG.maxYield) {
+    console.log(
+      "  ",
+      new Date(),
+      "Skipping proposed position due to high yield",
+      estYield
+    );
+    return;
+  }
+
   // Open the position
   const openParams: OpenParams = {
     rangeStart: priceToTick(lowerPrice, marketConfig.stepSize),
     rangeEnd: priceToTick(upperPrice, marketConfig.stepSize),
-    positionSize: DEVNET_CONFIG.positionSize * 10 ** 6,
+    positionSize: positionSize * 10 ** 6,
     tickDataMapping: marketConfig.tickDataAccounts,
   };
   const openAccounts: OpenAccounts = {
@@ -130,53 +173,101 @@ async function openRandomPosition(market: MarketConfig) {
   const price = marketData.currentPrice;
   console.log("  ", new Date(), "Current price", price);
 
-  let lower: number, upper: number;
-  let estYield = 0;
-  let openAttempts = 0;
-  do {
-    // generate two random prices deltas
-    const delta1 = Math.random() * market.maxRandomPriceDelta;
-    const delta2 = Math.random() * market.maxRandomPriceDelta;
+  // Calculate position size
+  const positionSize = await calculatePositionSize(connection);
+  console.log("  ", new Date(), "Position size", positionSize);
 
-    // subtract delta1 from price and add delta2 to price
+  let lower: number, upper: number;
+  let estYield = -1; // Initialize outside valid range
+  let openAttempts = 0;
+  let delta1 = Math.random() * market.maxRandomPriceDelta;
+  let delta2 = Math.random() * market.maxRandomPriceDelta;
+  const NARROW_FACTOR = DEVNET_CONFIG.yieldAdjustNarrowFactor; // Factor to narrow the range
+  const WIDEN_FACTOR = DEVNET_CONFIG.yieldAdjustWidenFactor; // Factor to widen the range
+
+  while (openAttempts < DEVNET_CONFIG.maxOpenAttempts) {
+    openAttempts++;
+
+    // Calculate bounds based on current deltas
     lower = Math.max(price - delta1, 0);
     upper = price + delta2;
 
-    // get yield of position of only itm tick
-    const getYieldResult = await getYield(market.address, lower, upper, 100);
-    estYield = getYieldResult.estYield;
-    console.log(
-      "  ",
-      new Date(),
-      "Lower",
-      lower,
-      "Upper",
-      upper,
-      "Yield",
-      estYield
-    );
-    openAttempts++;
-  } while (
-    estYield < DEVNET_CONFIG.minYield &&
-    openAttempts < DEVNET_CONFIG.maxOpenAttempts
-  );
+    // Ensure range is valid (lower < upper)
+    if (lower >= upper) {
+      console.log(
+        "  ",
+        new Date(),
+        `Attempt ${openAttempts}: Invalid range generated (lower >= upper), adjusting deltas.`
+      );
+      // Reset deltas slightly differently to avoid getting stuck
+      delta1 =
+        Math.random() * market.maxRandomPriceDelta * 0.5 + market.stepSize;
+      delta2 =
+        Math.random() * market.maxRandomPriceDelta * 0.5 + market.stepSize;
+      continue; // Try next attempt with new deltas
+    }
 
-  // Add check to prevent opening position if yield is too low
-  if (estYield < DEVNET_CONFIG.minYield) {
+    // Calculate yield
+    const getYieldResult = await getYield(
+      market.address,
+      lower,
+      upper,
+      positionSize
+    );
+    estYield = getYieldResult.estYield;
+
     console.log(
       "  ",
       new Date(),
-      "Skipping position due to low yield",
-      estYield
+      `Attempt ${openAttempts}: Lower ${lower.toFixed(
+        2
+      )}, Upper ${upper.toFixed(2)}, Yield ${estYield.toFixed(2)}%`
     );
-    return;
+
+    // Check if yield is acceptable
+    if (
+      estYield >= DEVNET_CONFIG.minYield &&
+      estYield <= DEVNET_CONFIG.maxYield
+    ) {
+      console.log("  ", new Date(), "Acceptable yield found.");
+      break; // Exit loop, proceed to open
+    }
+
+    // Adjust deltas for next attempt if not the last attempt
+    if (openAttempts < DEVNET_CONFIG.maxOpenAttempts) {
+      if (estYield < DEVNET_CONFIG.minYield) {
+        console.log("  ", new Date(), "Yield too low, narrowing range...");
+        delta1 *= NARROW_FACTOR;
+        delta2 *= NARROW_FACTOR;
+      } else {
+        // estYield > DEVNET_CONFIG.maxYield
+        console.log("  ", new Date(), "Yield too high, widening range...");
+        delta1 *= WIDEN_FACTOR;
+        delta2 *= WIDEN_FACTOR;
+      }
+      // Ensure deltas don't become too small or zero
+      delta1 = Math.max(delta1, market.stepSize / 2);
+      delta2 = Math.max(delta2, market.stepSize / 2);
+    }
   }
 
-  // open the position
+  // Check if loop finished with acceptable yield or due to max attempts
+  if (estYield < DEVNET_CONFIG.minYield || estYield > DEVNET_CONFIG.maxYield) {
+    console.log(
+      "  ",
+      new Date(),
+      `Could not find acceptable yield within ${
+        DEVNET_CONFIG.maxOpenAttempts
+      } attempts. Final yield: ${estYield.toFixed(2)}%. Skipping position.`
+    );
+    return; // Give up
+  }
+
+  // open the position with the final 'lower' and 'upper'
   const openParams: OpenParams = {
-    rangeStart: priceToTick(lower, market.stepSize),
-    rangeEnd: priceToTick(upper, market.stepSize),
-    positionSize: DEVNET_CONFIG.positionSize * 10 ** 6,
+    rangeStart: priceToTick(lower!, market.stepSize),
+    rangeEnd: priceToTick(upper!, market.stepSize),
+    positionSize: positionSize * 10 ** 6,
     tickDataMapping: market.tickDataAccounts,
   };
   const openAccounts: OpenAccounts = {
@@ -352,7 +443,7 @@ async function strategy1() {
     await closeNegativeYieldPositions();
 
     // wait a few seconds so that the txs are indexed
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 7000));
 
     // get number of open positions
     const userStats = await getUserStats(program, user.publicKey.toBase58());

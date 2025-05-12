@@ -98,38 +98,52 @@ export interface Market {
   vault: string;
 }
 
+export interface PositionSizeConfig {
+  type: "constant" | "range" | "max_balance";
+  value?: number; // for constant
+  min?: number; // for range
+  max?: number; // for range
+}
+
 export interface NetworkConfig {
   token: string;
   markets: MarketConfig[];
   adminTokenAccount: string;
-  positionSize: number;
+  positionSize: PositionSizeConfig;
   maxOpenAttempts: number;
   maxOpenPositions: number;
   minSecondsBetweenRuns: number;
   maxSecondsBetweenRuns: number;
   minYield: number;
+  maxYield: number;
+  yieldAdjustNarrowFactor: number;
+  yieldAdjustWidenFactor: number;
 }
 
 export const DEVNET_CONFIG: NetworkConfig = {
   token: "3kE1QbVM4ek15Jk2dpYfo7sWagKXzcFgiHYhMh1Wxq8N", // spl-token-faucet USDC
   adminTokenAccount: "9XTjgmuqgqSQB51r3JYCRAB6JGGympvetgZb9RaHDmKA",
-  positionSize: 100,
-  maxOpenAttempts: 3,
-  maxOpenPositions: 10,
-  minSecondsBetweenRuns: 60,
-  maxSecondsBetweenRuns: 60 * 10,
-  minYield: 5,
+  positionSize: {
+    type:
+      (process.env.POSITION_SIZE_TYPE as
+        | "constant"
+        | "range"
+        | "max_balance") || "constant",
+    value: Number(process.env.POSITION_SIZE) || 100,
+    min: Number(process.env.MIN_POSITION_SIZE) || 50,
+    max: Number(process.env.MAX_POSITION_SIZE) || 200,
+  },
+  maxOpenAttempts: Number(process.env.MAX_OPEN_ATTEMPTS) || 3,
+  maxOpenPositions: Number(process.env.MAX_OPEN_POSITIONS) || 10,
+  minSecondsBetweenRuns: Number(process.env.MIN_SECONDS_BETWEEN_RUNS) || 60,
+  maxSecondsBetweenRuns:
+    Number(process.env.MAX_SECONDS_BETWEEN_RUNS) || 60 * 10,
+  minYield: Number(process.env.MIN_YIELD) || 5,
+  maxYield: Number(process.env.MAX_YIELD) || 999999,
+  yieldAdjustNarrowFactor:
+    Number(process.env.YIELD_ADJUST_NARROW_FACTOR) || 0.75,
+  yieldAdjustWidenFactor: Number(process.env.YIELD_ADJUST_WIDEN_FACTOR) || 1.25,
   markets: [
-    // {
-    //   name: "Bitcoin",
-    //   address: "HTZNaYwecYoBaCh12EsaqkxeGpENXgcHmqhGw3Lr56Jf",
-    //   vault: "JBPbGkkBT97jUyGZsFLbmuC2YzSZM5kLtdB8a9bgDnDH",
-    //   stepSize: 100,
-    //   maxRandomPriceDelta: 2000,
-    //   tickDataAccounts: new Map([
-    //     [0, "FRwyCKzC4RfPMy1Tjs7fnMzRhmJBtG3i2wpieAhnDTDW"], // $0 - $260000
-    //   ]),
-    // },
     {
       name: "Solana",
       address: "CzJBmeVvDTjeH5xYbzp32hUURjbDqDNE3ykbdVJ8Nv3M",

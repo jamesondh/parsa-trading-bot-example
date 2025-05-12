@@ -101,24 +101,5 @@ export async function close(
     throw new Error("Transaction failed");
   }
 
-  // index the tx in parsa's db -- wait a few seconds to ensure we can fetch it
-  setTimeout(async () => {
-    try {
-      const response = await fetch(
-        `https://devnet.parsa.finance/api/indexTx/${txid}`
-      );
-      if (!response.ok) {
-        console.error(
-          `Failed to index transaction: ${response.status} ${response.statusText}`
-        );
-        // Optionally add response body for more detail
-        const errorBody = await response.text();
-        console.error("Error body:", errorBody);
-      }
-    } catch (e) {
-      console.error("Failed to index transaction:", e);
-    }
-  }, 10000);
-
   return txid;
 }
